@@ -1,0 +1,33 @@
+name: forge-cu
+
+artifactStorePath: .forge/artifact-store.yaml
+
+build:
+  - name: format-code
+    src: .
+    engine: go://go-format
+
+  - name: forge-cu
+    src: ./cmd/forge-cu
+    dest: ./build/bin
+    engine: go://go-build
+    spec:
+      ldflags: "-X main.Version={{.GitVersion}}"
+
+  - name: generated-mocks
+    src: .
+    dest: ./internal/util/mocks
+    engine: go://go-gen-mocks
+
+test:
+  - name: lint-tags
+    runner: "go://go-lint-tags"
+
+  - name: lint-license
+    runner: "go://go-lint-licenses"
+
+  - name: lint
+    runner: "go://go-lint"
+
+  - name: unit
+    runner: "go://go-test"

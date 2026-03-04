@@ -1,0 +1,161 @@
+# Contributing to forge-cu
+
+**Build, test, and submit changes to the Continuous Update system for multi-repo Go workspaces.**
+
+## Quick Start
+
+```bash
+# Clone the repository
+git clone git@github.com:alexandremahdhaoui/forge-cu.git
+cd forge-cu
+
+# Build the binary
+forge build forge-cu
+
+# Run all tests
+forge test-all
+
+# Run the binary
+./build/bin/forge-cu --help
+```
+
+## How do I structure commits?
+
+Each commit uses an emoji prefix and a structured body.
+
+| Emoji | Meaning |
+|-------|---------|
+| `✨` | New feature |
+| `🐛` | Bug fix |
+| `📖` | Documentation |
+| `🌱` | Misc (chore, test, refactor) |
+| `⚠` | Breaking change (maintainer approval required) |
+
+Commit body format:
+
+```
+✨ Short imperative summary (50 chars or less)
+
+Why: Explain the motivation. What problem exists?
+
+How: Describe the approach. What strategy did you choose?
+
+What:
+
+- internal/adapter/git.go: add CurrentBranch method
+- internal/driver/mcp/server.go: register cu-list-branches tool
+
+How changes were verified:
+
+- Unit tests for new logic
+- forge test-all: all 4 stages passed
+
+Signed-off-by: Your Name <your@email.com>
+```
+
+Every commit requires `Signed-off-by`. Use `git commit -s` to add it automatically.
+
+## How do I submit a pull request?
+
+1. Create a feature branch: `git checkout -b feat/my-change`.
+2. Make changes. Run `forge test-all` before pushing.
+3. Push and open a PR against `main`.
+4. PR title: imperative, under 70 characters.
+5. PR body: summary (1-3 bullets) + test plan.
+
+## How do I run tests?
+
+```bash
+# Run all build + test stages (use for final validation)
+forge test-all
+
+# Run individual stages for faster iteration
+forge test run unit          # Unit tests (Go test with -tags=unit)
+forge test run lint          # golangci-lint v2
+forge test run lint-tags     # Verify build tags on test files
+forge test run lint-license  # Verify Apache 2.0 license headers
+
+# Build targets
+forge build format-code      # Format all Go source files
+forge build forge-cu         # Build the binary to ./build/bin/
+forge build generated-mocks  # Regenerate mockery mocks
+```
+
+4 test stages. 3 build targets. Run `forge test-all` before marking work complete.
+
+## How is the project structured?
+
+```
+forge-cu/
+|-- cmd/forge-cu/
+|   |-- main.go             # Entry point, wiring
+|   |-- cli.go              # CLI subcommand dispatch
+|   +-- mcp.go              # MCP server startup
+|-- internal/
+|   |-- adapter/
+|   |   |-- adapter.go      # GitAdapter + SymlinkAdapter interfaces
+|   |   |-- git.go          # Git operations via os/exec
+|   |   +-- symlink.go      # Symlink create/remove/verify
+|   |-- controller/
+|   |   |-- compo.go        # CompoService (init, status, checkout, branches)
+|   |   |-- commit.go       # CommitService (stage + commit)
+|   |   +-- engine/
+|   |       +-- go.go       # GoCUEngine (go get + commit)
+|   |-- driver/mcp/
+|   |   +-- server.go       # 5 MCP tool registrations
+|   |-- types/
+|   |   +-- types.go        # Compo, RepoEntry, DepChange
+|   +-- util/mocks/         # Generated mocks (mockery)
+|-- pkg/config/
+|   +-- compo.go            # CompoConfig schema, YAML loading, validation
+|-- hack/
+|   +-- boilerplate.go.txt  # License header template
+|-- forge.yaml              # Build + test configuration
+|-- .golangci.yml           # Linter configuration
++-- .mockery.yml            # Mock generation configuration
+```
+
+3 layers: adapter (git, filesystem), controller (business logic), driver (MCP, CLI).
+
+## What does each package do?
+
+**Exported:**
+
+| Package | Purpose |
+|---------|---------|
+| `pkg/config` | CompoConfig YAML schema, loading, validation |
+
+**Internal:**
+
+| Package | Purpose |
+|---------|---------|
+| `internal/adapter` | GitAdapter (10 methods) and SymlinkAdapter (3 methods) |
+| `internal/controller` | CompoService (6 methods) and CommitService (1 method) |
+| `internal/controller/engine` | GoCUEngine -- runs `go get` + `go mod tidy` + auto-commit |
+| `internal/driver/mcp` | Registers 5 MCP tools on the mcpserver |
+| `internal/types` | Domain types: Compo, RepoEntry, DepChange |
+| `internal/util/mocks/*` | Mockery-generated test doubles |
+
+## What does each MCP tool do?
+
+| Tool | Description |
+|------|-------------|
+| `cu-status` | Return uncommitted dependency changes from git status |
+| `cu-commit` | Stage all changes and commit with optional message |
+| `cu-go-get` | Run `go get pkg@version` + `go mod tidy`, auto-commit result |
+| `cu-checkout` | Switch CU repo to a different composition branch |
+| `cu-list-branches` | List all branches and identify the current one |
+
+## What conventions must I follow?
+
+**Build tags.** All test files must include `//go:build unit` as the first line after the license header.
+
+**License headers.** Every `.go` file starts with the Apache 2.0 header from `hack/boilerplate.go.txt`. The `lint-license` stage enforces this.
+
+**Generated files.** Files prefixed with `zz_generated.` are generated by mockery. Do not edit them. Run `forge build generated-mocks` to regenerate.
+
+**Linting.** golangci-lint v2 runs with `-tags=unit`. Configuration lives in `.golangci.yml`.
+
+**Interface checks.** Every concrete type that implements an interface includes a compile-time check: `var _ Interface = (*impl)(nil)`.
+
+**Dependencies.** 3 direct dependencies: forge v0.38.0, go-sdk v1.4.0, yaml.v3. Keep dependencies minimal.
