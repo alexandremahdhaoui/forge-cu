@@ -1,0 +1,93 @@
+testCases:
+  - name: "commit-multi-repo"
+    description: "Modify files in 2 repos, commit via CLI, then modify again, commit via MCP"
+    setup:
+      - id: init
+        command: init-workspace
+        input:
+          repos:
+            - name: repo-a
+              managedFiles:
+                - go.mod
+                - go.sum
+            - name: repo-b
+              managedFiles:
+                - go.mod
+                - go.sum
+          compoName: "test-compo"
+
+    steps:
+      - id: modify-repo-a
+        command: write-file
+        input:
+          path: '{{ index .Repos "repo-a" "Path" }}/go.mod'
+          content: |
+            module example.com/repo-a
+            go 1.22
+            require golang.org/x/text v0.14.0
+
+      - id: modify-repo-b
+        command: write-file
+        input:
+          path: '{{ index .Repos "repo-b" "Path" }}/go.mod'
+          content: |
+            module example.com/repo-b
+            go 1.22
+            require golang.org/x/net v0.20.0
+
+      - id: cli-commit
+        mode: cli
+        command: commit
+        input:
+          cu-repo-path: "{{.CURepoPath}}"
+          message: "cli: update both repos"
+        expected:
+          exitCode: 0
+
+      - id: verify-clean
+        mode: mcp
+        tool: cu-status
+        input:
+          cuRepoPath: "{{.CURepoPath}}"
+        expected:
+          changes:
+            length: 0
+
+      - id: modify-repo-a-again
+        command: write-file
+        input:
+          path: '{{ index .Repos "repo-a" "Path" }}/go.mod'
+          content: |
+            module example.com/repo-a
+            go 1.22
+            require golang.org/x/text v0.15.0
+
+      - id: modify-repo-b-again
+        command: write-file
+        input:
+          path: '{{ index .Repos "repo-b" "Path" }}/go.mod'
+          content: |
+            module example.com/repo-b
+            go 1.22
+            require golang.org/x/net v0.21.0
+
+      - id: mcp-commit
+        mode: mcp
+        tool: cu-commit
+        input:
+          cuRepoPath: "{{.CURepoPath}}"
+          message: "mcp: update both repos again"
+        expected:
+          commitHash:
+            notEmpty: true
+
+      - id: verify-clean-after-mcp
+        mode: mcp
+        tool: cu-status
+        input:
+          cuRepoPath: "{{.CURepoPath}}"
+        expected:
+          changes:
+            length: 0
+
+    teardown: []

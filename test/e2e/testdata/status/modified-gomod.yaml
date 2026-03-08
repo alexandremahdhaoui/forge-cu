@@ -1,0 +1,42 @@
+testCases:
+  - name: "status-modified-gomod"
+    description: "Detect uncommitted go.mod changes via CLI and MCP"
+    setup:
+      - id: init
+        command: init-workspace
+        input:
+          repos:
+            - name: repo-a
+              managedFiles:
+                - go.mod
+                - go.sum
+          compoName: "test-compo"
+
+    steps:
+      - id: modify-gomod
+        command: write-file
+        input:
+          path: '{{ index .Repos "repo-a" "Path" }}/go.mod'
+          content: |
+            module example.com/repo-a
+            go 1.22
+            require golang.org/x/text v0.14.0
+
+      - id: cli-status
+        mode: cli
+        command: status
+        input:
+          cu-repo-path: "{{.CURepoPath}}"
+        expected:
+          exitCode: 0
+
+      - id: mcp-status
+        mode: mcp
+        tool: cu-status
+        input:
+          cuRepoPath: "{{.CURepoPath}}"
+        expected:
+          changes:
+            length: 1
+
+    teardown: []

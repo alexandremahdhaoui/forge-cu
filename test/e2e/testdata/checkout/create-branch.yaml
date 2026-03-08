@@ -1,0 +1,56 @@
+testCases:
+  - name: "checkout-create-branch"
+    description: "Create branch via CLI, verify exists, create another via MCP, verify both exist"
+    setup:
+      - id: init
+        command: init-workspace
+        input:
+          repos:
+            - name: repo-a
+              managedFiles:
+                - go.mod
+                - go.sum
+          compoName: "test-compo"
+
+    steps:
+      - id: cli-create-branch-1
+        mode: cli
+        command: checkout
+        input:
+          cu-repo-path: "{{.CURepoPath}}"
+          _args:
+            - "branch-1"
+        expected:
+          exitCode: 0
+
+      - id: switch-back-to-main
+        mode: mcp
+        tool: cu-checkout
+        input:
+          cuRepoPath: "{{.CURepoPath}}"
+          branch: "main"
+        expected:
+          branch: "main"
+
+      - id: mcp-create-branch-2
+        mode: mcp
+        tool: cu-checkout
+        input:
+          cuRepoPath: "{{.CURepoPath}}"
+          branch: "branch-2"
+        expected:
+          branch: "branch-2"
+
+      - id: verify-both-branches
+        mode: mcp
+        tool: cu-list-branches
+        input:
+          cuRepoPath: "{{.CURepoPath}}"
+        expected:
+          branches:
+            contains:
+              - "branch-1"
+              - "branch-2"
+              - "main"
+
+    teardown: []

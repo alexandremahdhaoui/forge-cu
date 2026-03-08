@@ -1,0 +1,45 @@
+testCases:
+  - name: "list-branches-basic"
+    description: "List branches via CLI (expect main), create branch, list via MCP (expect main + new)"
+    setup:
+      - id: init
+        command: init-workspace
+        input:
+          repos:
+            - name: repo-a
+              managedFiles:
+                - go.mod
+                - go.sum
+          compoName: "test-compo"
+
+    steps:
+      - id: cli-list-initial
+        mode: cli
+        command: list-branches
+        input:
+          cu-repo-path: "{{.CURepoPath}}"
+        expected:
+          exitCode: 0
+
+      - id: create-branch
+        mode: mcp
+        tool: cu-checkout
+        input:
+          cuRepoPath: "{{.CURepoPath}}"
+          branch: "feat-list-test"
+        expected:
+          branch: "feat-list-test"
+
+      - id: mcp-list-after-create
+        mode: mcp
+        tool: cu-list-branches
+        input:
+          cuRepoPath: "{{.CURepoPath}}"
+        expected:
+          branches:
+            contains:
+              - "main"
+              - "feat-list-test"
+          current: "feat-list-test"
+
+    teardown: []

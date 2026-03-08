@@ -1,0 +1,53 @@
+testCases:
+  - name: "checkout-switch-branch"
+    description: "Create branch via CLI checkout, verify on new branch, switch back via MCP"
+    setup:
+      - id: init
+        command: init-workspace
+        input:
+          repos:
+            - name: repo-a
+              managedFiles:
+                - go.mod
+                - go.sum
+          compoName: "test-compo"
+
+    steps:
+      - id: cli-create-branch
+        mode: cli
+        command: checkout
+        input:
+          cu-repo-path: "{{.CURepoPath}}"
+          _args:
+            - "feat-test"
+        expected:
+          exitCode: 0
+
+      - id: mcp-verify-branch
+        mode: mcp
+        tool: cu-list-branches
+        input:
+          cuRepoPath: "{{.CURepoPath}}"
+        expected:
+          branches:
+            contains:
+              - "feat-test"
+
+      - id: mcp-switch-main
+        mode: mcp
+        tool: cu-checkout
+        input:
+          cuRepoPath: "{{.CURepoPath}}"
+          branch: "main"
+        expected:
+          branch: "main"
+
+      - id: mcp-verify-main
+        mode: mcp
+        tool: cu-list-branches
+        input:
+          cuRepoPath: "{{.CURepoPath}}"
+        expected:
+          current: "main"
+
+    teardown: []

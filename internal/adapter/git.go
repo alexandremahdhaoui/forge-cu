@@ -44,7 +44,10 @@ func (g *gitAdapter) Clone(ctx context.Context, url, dest string) error {
 
 func (g *gitAdapter) Checkout(ctx context.Context, repoPath, branch string) error {
 	if err := g.run(ctx, repoPath, "checkout", branch); err != nil {
-		return fmt.Errorf("git checkout %s in %s: %w", branch, repoPath, err)
+		// Branch might not exist yet; try creating it.
+		if err2 := g.run(ctx, repoPath, "checkout", "-b", branch); err2 != nil {
+			return fmt.Errorf("git checkout %s in %s: %w", branch, repoPath, err2)
+		}
 	}
 	return nil
 }
@@ -55,7 +58,7 @@ func (g *gitAdapter) Status(ctx context.Context, repoPath string) ([]types.DepCh
 		return nil, fmt.Errorf("git status in %s: %w", repoPath, err)
 	}
 
-	var changes []types.DepChange
+	changes := make([]types.DepChange, 0)
 	scanner := bufio.NewScanner(strings.NewReader(out))
 	for scanner.Scan() {
 		line := scanner.Text()

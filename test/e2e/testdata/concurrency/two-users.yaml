@@ -1,0 +1,101 @@
+testCases:
+  - name: "two-users-sequential"
+    description: "Simulate two users working on different branches sequentially"
+    setup:
+      - id: init
+        command: init-workspace
+        input:
+          repos:
+            - name: repo-a
+              managedFiles:
+                - go.mod
+                - go.sum
+          compoName: "test-compo"
+
+    steps:
+      - id: user-a-checkout-main
+        mode: mcp
+        tool: cu-checkout
+        input:
+          cuRepoPath: "{{.CURepoPath}}"
+          branch: "main"
+        expected:
+          branch: "main"
+
+      - id: user-a-modify
+        command: write-file
+        input:
+          path: '{{ index .Repos "repo-a" "Path" }}/go.mod'
+          content: |
+            module example.com/repo-a
+            go 1.22
+            require golang.org/x/text v0.14.0
+
+      - id: user-a-commit
+        mode: mcp
+        tool: cu-commit
+        input:
+          cuRepoPath: "{{.CURepoPath}}"
+          message: "user-a: add text dependency"
+        expected:
+          commitHash:
+            notEmpty: true
+
+      - id: user-a-verify-clean
+        mode: mcp
+        tool: cu-status
+        input:
+          cuRepoPath: "{{.CURepoPath}}"
+        expected:
+          changes:
+            length: 0
+
+      - id: user-b-checkout-feat
+        mode: mcp
+        tool: cu-checkout
+        input:
+          cuRepoPath: "{{.CURepoPath}}"
+          branch: "feat-x"
+        expected:
+          branch: "feat-x"
+
+      - id: user-b-modify
+        command: write-file
+        input:
+          path: '{{ index .Repos "repo-a" "Path" }}/go.mod'
+          content: |
+            module example.com/repo-a
+            go 1.22
+            require golang.org/x/net v0.20.0
+
+      - id: user-b-commit
+        mode: mcp
+        tool: cu-commit
+        input:
+          cuRepoPath: "{{.CURepoPath}}"
+          message: "user-b: add net dependency"
+        expected:
+          commitHash:
+            notEmpty: true
+
+      - id: user-b-verify-clean
+        mode: mcp
+        tool: cu-status
+        input:
+          cuRepoPath: "{{.CURepoPath}}"
+        expected:
+          changes:
+            length: 0
+
+      - id: verify-both-branches
+        mode: mcp
+        tool: cu-list-branches
+        input:
+          cuRepoPath: "{{.CURepoPath}}"
+        expected:
+          branches:
+            contains:
+              - "main"
+              - "feat-x"
+
+    teardown: []

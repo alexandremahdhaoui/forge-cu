@@ -31,3 +31,6 @@ test:
 
   - name: unit
     runner: "go://go-test"
+
+  - name: e2e
+    runner: "go://go-test"

@@ -1,0 +1,71 @@
+testCases:
+  - name: "commit-single-repo"
+    description: "Modify file in one repo, commit via CLI, then modify again, commit via MCP"
+    setup:
+      - id: init
+        command: init-workspace
+        input:
+          repos:
+            - name: repo-a
+              managedFiles:
+                - go.mod
+                - go.sum
+          compoName: "test-compo"
+
+    steps:
+      - id: modify-for-cli
+        command: write-file
+        input:
+          path: '{{ index .Repos "repo-a" "Path" }}/go.mod'
+          content: |
+            module example.com/repo-a
+            go 1.22
+            require golang.org/x/text v0.14.0
+
+      - id: cli-commit
+        mode: cli
+        command: commit
+        input:
+          cu-repo-path: "{{.CURepoPath}}"
+          message: "cli: update go.mod"
+        expected:
+          exitCode: 0
+
+      - id: verify-clean-after-cli
+        mode: mcp
+        tool: cu-status
+        input:
+          cuRepoPath: "{{.CURepoPath}}"
+        expected:
+          changes:
+            length: 0
+
+      - id: modify-for-mcp
+        command: write-file
+        input:
+          path: '{{ index .Repos "repo-a" "Path" }}/go.mod'
+          content: |
+            module example.com/repo-a
+            go 1.22
+            require golang.org/x/text v0.15.0
+
+      - id: mcp-commit
+        mode: mcp
+        tool: cu-commit
+        input:
+          cuRepoPath: "{{.CURepoPath}}"
+          message: "mcp: update go.mod"
+        expected:
+          commitHash:
+            notEmpty: true
+
+      - id: verify-clean-after-mcp
+        mode: mcp
+        tool: cu-status
+        input:
+          cuRepoPath: "{{.CURepoPath}}"
+        expected:
+          changes:
+            length: 0
+
+    teardown: []

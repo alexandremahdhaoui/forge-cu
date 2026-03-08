@@ -1,0 +1,65 @@
+testCases:
+  - name: "go-get-add-dependency"
+    description: "Add dependency via CLI go-get, verify committed, add another via MCP"
+    setup:
+      - id: init
+        command: init-workspace
+        input:
+          repos:
+            - name: repo-a
+              managedFiles:
+                - go.mod
+                - go.sum
+          compoName: "test-compo"
+
+      - id: write-gomod
+        command: write-file
+        input:
+          path: '{{ index .Repos "repo-a" "Path" }}/go.mod'
+          content: |
+            module example.com/repo-a
+            go 1.22
+
+    steps:
+      - id: cli-go-get
+        mode: cli
+        command: go-get
+        input:
+          cu-repo-path: "{{.CURepoPath}}"
+          repo-dir: '{{ index .Repos "repo-a" "Path" }}'
+          _args:
+            - "golang.org/x/text@v0.14.0"
+        expected:
+          exitCode: 0
+
+      - id: verify-clean-after-cli
+        mode: mcp
+        tool: cu-status
+        input:
+          cuRepoPath: "{{.CURepoPath}}"
+        expected:
+          changes:
+            length: 0
+
+      - id: mcp-go-get
+        mode: mcp
+        tool: cu-go-get
+        input:
+          repoDir: '{{ index .Repos "repo-a" "Path" }}'
+          cuRepoPath: "{{.CURepoPath}}"
+          pkg: "golang.org/x/net"
+          version: "v0.20.0"
+        expected:
+          commitHash:
+            notEmpty: true
+
+      - id: verify-clean-after-mcp
+        mode: mcp
+        tool: cu-status
+        input:
+          cuRepoPath: "{{.CURepoPath}}"
+        expected:
+          changes:
+            length: 0
+
+    teardown: []

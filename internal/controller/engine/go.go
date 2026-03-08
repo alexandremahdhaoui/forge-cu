@@ -40,21 +40,14 @@ func NewGoCUEngine(commitSvc controller.CommitService) GoCUEngine {
 	return &goCUEngine{commitSvc: commitSvc}
 }
 
-// GoGet runs "go get pkg@version" and "go mod tidy" in repoDir, then commits
-// the resulting changes in the CU repo.
+// GoGet runs "go get pkg@version" in repoDir, then commits the resulting
+// changes in the CU repo.
 func (e *goCUEngine) GoGet(ctx context.Context, repoDir, cuRepoPath, pkg, version string) ([]types.DepChange, string, error) {
 	// Run go get pkg@version.
 	cmd := exec.CommandContext(ctx, "go", "get", pkg+"@"+version)
 	cmd.Dir = repoDir
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return nil, "", fmt.Errorf("go get %s@%s: %w\n%s", pkg, version, err, out)
-	}
-
-	// Run go mod tidy.
-	cmd = exec.CommandContext(ctx, "go", "mod", "tidy")
-	cmd.Dir = repoDir
-	if out, err := cmd.CombinedOutput(); err != nil {
-		return nil, "", fmt.Errorf("go mod tidy: %w\n%s", err, out)
 	}
 
 	// Commit the changes in the CU repo.

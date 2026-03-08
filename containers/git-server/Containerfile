@@ -1,0 +1,11 @@
+FROM alpine:3.20
+
+RUN apk add --no-cache git git-daemon
+
+RUN git config --global init.defaultBranch main
+
+RUN mkdir -p /srv/git
+
+EXPOSE 9418
+
+CMD ["git", "daemon", "--export-all", "--enable=receive-pack", "--base-path=/srv/git", "--reuseaddr", "/srv/git"]
